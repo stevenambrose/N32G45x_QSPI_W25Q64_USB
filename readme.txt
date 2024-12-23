@@ -19,7 +19,7 @@
 
     描述Demo的测试步骤和现象 
          1. 编译后下载程序复位运行；
-         2. 通过 USB 线连接 J3 USB 口，USB 挂载完成后，识别成 U 盘设备
+         2. 通过 USB 线连接 J3 USB 口，按住PA6上电，USB 挂载完成后，识别成 U 盘设备
 
 4. 注意事项
     首次挂载 U 盘需要格式化，格式化完成后即可当成 U 盘使用
@@ -45,7 +45,7 @@
                   
     Describe the test steps and phenomena of Demo 
         1. After compiling, download the program to reset and run;
-        2. Connect the J3 USB port through a USB cable, and after the USB is mounted, it will be recognized as a U disk device.
+        2. Connect the J3 USB port through a USB cable, pressing PA6 button, after the USB is mounted, it will be recognized as a U disk device.
  
 4. Matters needing attention
     The first mount U disk needs to be formatted, and it can be used as a U disk after formatting.
