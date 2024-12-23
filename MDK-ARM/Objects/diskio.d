@@ -1,11 +1,11 @@
 .\objects\diskio.o: ..\firmware\fatfs\diskio.c
 .\objects\diskio.o: ..\firmware\fatfs\ff.h
 .\objects\diskio.o: ..\firmware\fatfs\ffconf.h
+.\objects\diskio.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\diskio.o: ..\firmware\fatfs\diskio.h
 .\objects\diskio.o: ..\inc\w25q64.h
 .\objects\diskio.o: ..\firmware\CMSIS\device\n32g45x.h
 .\objects\diskio.o: ..\firmware\CMSIS\core\core_cm4.h
-.\objects\diskio.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
 .\objects\diskio.o: ..\firmware\CMSIS\core\cmsis_version.h
 .\objects\diskio.o: ..\firmware\CMSIS\core\cmsis_compiler.h
 .\objects\diskio.o: ..\firmware\CMSIS\core\cmsis_armcc.h

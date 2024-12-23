@@ -9,11 +9,13 @@
 
 #include "ff.h"         /* Obtains integer types */
 #include "diskio.h"     /* Declarations of disk functions */
-
+#include "w25q64.h"
 /* Definitions of physical drive number for each drive */
 #define DEV_W25Q64      0   /* Example: Map Ramdisk to physical drive 0 */
-#include "w25q64.h"
+//#define DEV_MMC       1   /* Example: Map MMC/SD card to physical drive 1 */
+//#define DEV_USB       2   /* Example: Map USB MSD to physical drive 2 */
 
+#define ADDR_SHIFT      0X400000
 
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
@@ -23,21 +25,27 @@ DSTATUS disk_status(
     BYTE pdrv       /* Physical drive nmuber to identify the drive */
 )
 {
-    DSTATUS stat;
+    DSTATUS stat = STA_NOINIT;
+    uint32_t TID;
 
     switch (pdrv)
     {
         case DEV_W25Q64 :
-            if (W25Q64_ReadID() != 0X00EF4017)  //W25Q64_ID
-                stat = STA_NOINIT;
+            TID=W25Q64_ReadID();
+            if ((0X00EF4017 && TID))
+            {
+                stat &= ~STA_NOINIT;
+            }
             else
-                stat = 0;
+            {
+                stat = STA_NOINIT;
+            }
 
             break;
 
         default:
             stat = STA_NOINIT;
-            break;
+
     }
 
     return stat;
@@ -53,21 +61,26 @@ DSTATUS disk_initialize(
     BYTE pdrv               /* Physical drive nmuber to identify the drive */
 )
 {
-    DSTATUS stat;
-    int result;
+    DSTATUS stat = STA_NOINIT;
+    uint16_t i;
 
     switch (pdrv)
     {
         case DEV_W25Q64 :
-            result = W25Q64_Init();
 
-            // translate the reslut code here
+            W25Q64_Init();
 
-            return disk_status(DEV_W25Q64);
+            stat = disk_status(DEV_W25Q64);
+            break;
+
+        // translate the reslut code here
+
+        default:
+            stat = STA_NOINIT;
 
     }
 
-    return STA_NOINIT;
+    return stat;
 }
 
 
@@ -83,19 +96,24 @@ DRESULT disk_read(
     UINT count      /* Number of sectors to read */
 )
 {
-    DRESULT res;
+    DRESULT status = RES_PARERR;
+    uint32_t addr;
 
     switch (pdrv)
     {
         case DEV_W25Q64 :
+            addr = sector;
+            addr = (addr << 12) + ADDR_SHIFT;
 
-            QspiFlashRead(sector * 4096, buff, count * 4096);
-            res = RES_OK;
+            QspiFlashRead(addr, buff, count << 12);
+            status = RES_OK;
+            break;
 
-            return res;
+        default:
+            status = RES_PARERR;
     }
 
-    return RES_PARERR;
+    return status;
 }
 
 
@@ -113,22 +131,24 @@ DRESULT disk_write(
     UINT count          /* Number of sectors to write */
 )
 {
-    DRESULT res;
-    int result;
+    DRESULT status = RES_PARERR;
     uint32_t waddr;
 
     switch (pdrv)
     {
         case DEV_W25Q64 :
-            waddr = sector + 1024;                           //扇区偏移4M，头4M用于XIP程序
-            waddr = (uint32_t)(waddr << 12);
-            QspiFlashErase(0x20, waddr);
-            W25Q64_BufferWrite((uint8_t *)buff, waddr, 4096);
-            res = RES_OK;
-            return res;
+            waddr = (sector <<12)+ADDR_SHIFT;
+            QspiFlashErase(0x20,waddr);
+            W25Q64_BufferWrite((uint8_t *)buff,waddr,count<<12);
+            status = RES_OK;
+        break;
+        
+        default:
+            status = RES_PARERR;
+
     }
 
-    return RES_PARERR;
+    return status;
 }
 
 #endif
@@ -144,42 +164,41 @@ DRESULT disk_ioctl(
     void *buff      /* Buffer to send/receive control data */
 )
 {
-    DRESULT res;
+    DRESULT status = RES_PARERR;
     int result;
 
     switch (pdrv)
     {
         case DEV_W25Q64 :
-
-            switch (cmd)
+            switch(cmd)
             {
                 case GET_SECTOR_COUNT:
-                    *(DWORD *)buff = 4096;          //W25Q64,8MByte,4096个扇区
-                    break;
-
+                    *(DWORD *)buff = 1024;
+                break;
+                
                 case GET_SECTOR_SIZE:
-                    *(WORD *)buff = 4096;           //以一个扇区4096字节为读写单位
-                    break;
-
+                    *(WORD *)buff = 4096;
+                break;
+                
                 case GET_BLOCK_SIZE:
-                    *(WORD *)buff = 1;              //每次擦除一个扇区
-                    break;
-
+                    *(DWORD *)buff = 1;
+                break;
             }
-
-            res = RES_OK;
-            return res;
-
+        status = RES_OK;
+        break;
+                
+        default:
+            status = RES_PARERR;
     }
 
-    return RES_PARERR;
+    return status;
 }
 
 __weak DWORD get_fattime(void) {
 	/* Returns current time packed into a DWORD variable */
 	return	  ((DWORD)(2024 - 1980) << 25)	/* Year 2013 */
 			| ((DWORD)12 << 21)				/* Month 7 */
-			| ((DWORD)18 << 16)				/* Mday 28 */
+			| ((DWORD)21 << 16)				/* Mday 28 */
 			| ((DWORD)11 << 11)				/* Hour 0 */
 			| ((DWORD)59 << 5)				/* Min 0 */
 			| ((DWORD)59 >> 1);				/* Sec 0 */

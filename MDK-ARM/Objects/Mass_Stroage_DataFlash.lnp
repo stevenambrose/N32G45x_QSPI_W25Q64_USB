@@ -24,6 +24,7 @@
 ".\objects\scsi_data.o"
 ".\objects\memory.o"
 ".\objects\w25q64.o"
+".\objects\button.o"
 ".\objects\usb_core.o"
 ".\objects\usb_init.o"
 ".\objects\usb_int.o"

@@ -41,8 +41,175 @@
 #include "mass_mal.h"
 #include "stdio.h"
 #include "string.h"
-uint32_t buf1[1024],buf2[1024];
+#include "ff.h"
+#include "ffconf.h"
+
+FATFS fs;
+FIL fnew;
+FRESULT res_flash;
+UINT fnum;
+BYTE ReadBuffer[4096] = {0};
+BYTE WriteBuffer[] =            /* 写缓冲区*/
+    " this is a file system testing";
 void usart_init(void);
+
+void DFU_enter(void)
+{
+    GPIO_InitType DFU_IO;
+    GPIO_InitStruct(&DFU_IO);
+    
+    DFU_IO.GPIO_Mode = GPIO_Mode_IPU;
+    DFU_IO.Pin      =GPIO_PIN_6;
+    GPIO_InitPeripheral(GPIOA,&DFU_IO);
+    
+    if(GPIO_ReadInputDataBit(GPIOA,GPIO_PIN_6)==RESET)
+    {
+    /* MAL configuration */
+        MAL_Init(0);
+
+        USB_Interrupts_Config();
+
+        Set_USBClock();
+
+        USB_Init();
+
+        while (bDeviceState != CONFIGURED);
+    }
+}
+
+
+void FatFs_Test(void)
+{
+    uint32_t i;
+    BYTE work[FF_MAX_SS];
+    MKFS_PARM opt =
+    {
+        .fmt = FM_FAT | FM_SFD,
+        .n_fat = 1,
+        .align = 0,
+        .n_root = 0,
+        .au_size = 0
+    };
+
+    res_flash = f_mount(&fs, "0:", 1);
+
+    if (res_flash == FR_NO_FILESYSTEM)
+    {
+        printf("》FLASH还没有文件系统，即将进行格式化...\r\n");
+
+        res_flash = f_mkfs("0:", &opt, work, sizeof(work));
+
+        if (res_flash == FR_OK)
+        {
+            printf("》FLASH已成功格式化文件系统。\r\n");
+            res_flash = f_mount(NULL, "0:", 1);
+            res_flash = f_mount(&fs, "0:", 1);
+
+            if (res_flash == FR_OK)
+            {
+                printf("格式化后挂载成功\r\n");
+            }
+            else
+            {
+                printf("格式化后挂载失败, err = %d\r\n", res_flash);
+            }
+        }
+        else
+        {
+            printf("《《格式化失败。》》\r\n");
+            printf("errcode = %d\r\n", res_flash);
+
+            while (1);
+        }
+    }
+    else if (res_flash != FR_OK)
+    {
+        printf("！！FatFs mount fail(%d)\r\n", res_flash);
+        printf("！！Maybe：SPI Flash init fail。\r\n");
+        printf("请下载 SPI—读写串行FLASH 例程测试，如果正常，在该例程f_mount语句下if语句前临时多添加一句 res_flash = FR_NO_FILESYSTEM; 让重新直接执行格式化流程\r\n");
+
+        while (1);
+    }
+    else
+    {
+        printf("》FatFs mount successful\r\n");
+    }
+
+    //    /*----------------------- 文件系统测试：写测试 -------------------*/
+    //  /* 打开文件，每次都以新建的形式打开，属性为可写 */
+    //  printf("\r\n****** Write testing... ******\r\n");
+    //  res_flash = f_open(&fnew, "0:/test1.txt",FA_CREATE_ALWAYS | FA_WRITE );
+    //  printf("/******************************************************/\r\n");
+    //  if ( res_flash == FR_OK )
+    //  {
+    //      printf("》open creat successful,ready to write.\r\n");
+    //      /* 将指定存储区内容写入到文件内 */
+    //      res_flash=f_write(&fnew,WriteBuffer,sizeof(WriteBuffer),&fnum);
+    //      if(res_flash == FR_OK)
+    //      {
+    //        printf("》fail write successful,len：%d\n",fnum);
+    //        printf("》writing data is ：\r\n%s\r\n",WriteBuffer);
+    //      }
+    //      else
+    //      {
+    //        printf("！！fail write fail：(%d)\n",res_flash);
+    //      }
+    //          /* 不再读写，关闭文件 */
+    //      f_close(&fnew);
+    //  }
+    //  else
+    //  {
+    //      printf("！！open/creat fail.\r\n");
+    //  }
+
+    /*----------------------- 文件系统测试：读测试 -------------------*/
+    printf("\r\n****** ready for file reading... ******\r\n");
+    res_flash = f_open(&fnew, "0:/Oscilloscope.bin", FA_OPEN_EXISTING | FA_READ);
+    DWORD fileSize = f_size(&fnew);
+    printf("！！file size：(%d)\n", fileSize);
+
+    if (res_flash == FR_OK)
+    {
+        printf("》open successful.\r\n");
+
+        res_flash = f_read(&fnew, ReadBuffer, sizeof(ReadBuffer), &fnum);
+
+        if (res_flash == FR_OK)
+        {
+            //          printf("》file read succesul,reading data len ：%d\r\n",fnum);
+            for (i = 0; i < fnum; i++)
+            {
+                printf(" %02x ", ReadBuffer[i]);
+            }
+
+            printf("\n\r");
+
+        }
+        else
+        {
+            printf("！！file reading fail：(%d)\n", res_flash);
+        }
+    }
+    else
+    {
+        printf("！！open file failure.\r\n");
+    }
+
+    /* 不再读写，关闭文件 */
+    f_close(&fnew);
+
+    /* 不再使用文件系统，取消挂载文件系统 */
+
+    f_mount(NULL, "0:", 1);
+
+}
+
+
+
+
+
+
+
 /*******************************************************************************
  * Function Name  : main.
  * Description    : main routine.
@@ -52,70 +219,19 @@ void usart_init(void);
  *******************************************************************************/
 int main(void)
 {
-    uint32_t i;
+
     Set_System();
-    
-    /* MAL configuration */
-    MAL_Init(0);
-    
+
     usart_init();
     
-//    for(i=0;i<1024;i++) buf1[i]=i+0X10000000;
-//    for(i=0;i<1024;i++) buf2[i]=i+0XF0000000;
-//    
-//    QspiFlashErase(0x20,0x000000);
-//    W25Q64_BufferWrite(buf1,0,512);
-//    QspiFlashErase(0x20,0x1000);
-//    QspiFlashErase(0x20,0x2000);
-//    QspiFlashErase(0x20,0x3000);
-//    QspiFlashErase(0x20,0x004000); 
-//    W25Q64_BufferWrite(buf2,0x4000,512);
-//    QspiFlashErase(0x20,0x5000);
-//    QspiFlashErase(0x20,0x6000);
-//    QspiFlashErase(0x20,0x7000);
-//    QspiFlashErase(0x20,0x8000);
-//    QspiFlashErase(0x20,0x9000);
-//    QspiFlashErase(0x20,0xA000); 
-//    QspiFlashErase(0x20,0xB000);
-//    
-//    memset(buf1,0,sizeof(buf1));
-//    memset(buf2,0,sizeof(buf2));
-//    QspiFlashRead(0x0000,buf1,1024);
-//    QspiFlashRead(0x4000,buf2,1024);
-//    printf("read_addr:0x00\n\r");
-//    for(i=0;i<512;i++)
-//    {
-//        printf(" 0x%08x ",buf1[i]);
-//    }
-//    printf("\n\r");
-//    printf("\n\r");
-//    printf("read_addr:0x4000\n\r");
-//    for(i=0;i<512;i++)
-//    {
-//        printf(" 0x%08x ",buf2[i]);
-//    }
-//    printf("\n\r");
-//    printf("\n\r");
-
-    USB_Interrupts_Config();
-
-    Set_USBClock();
-
-    USB_Init(); 
-    
-    
-
-    while (bDeviceState != CONFIGURED);
-    
-    
-    
+    DFU_enter();
     
     
     while (1)
     {
-            
+
     }
-        
+
 }
 
 #ifdef USE_FULL_ASSERT
@@ -138,6 +254,7 @@ void assert_failed(const uint8_t* expr, const uint8_t* file, uint32_t line)
     {
     }
 }
+
 #endif
 #define USARTx          USART1
 #define USARTx_GPIO     GPIOA
@@ -192,6 +309,7 @@ void usart_init(void)
 int fputc(int ch, FILE* f)
 {
     USART_SendData(USARTx, (uint8_t)ch);
+
     while (USART_GetFlagStatus(USARTx, USART_FLAG_TXDE) == RESET)
         ;
 

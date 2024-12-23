@@ -26,7 +26,7 @@
 /* Private define ------------------------------------------------------------*/
 #define FLASH_PAGE_SIZE 4096        //4k
 #define FLASH_SIZE      4*1024
-#define FLASH_OFFSET    0x400000
+
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 uint32_t Mass_Memory_Size[2];
