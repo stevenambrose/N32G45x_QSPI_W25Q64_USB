@@ -6,42 +6,6 @@ LR_IROM1 0x08000000 0x00080000  {    ; load region size_region
   ER_IROM1 0x08000000 0x00080000  {  ; load address = execution address
    *.o (RESET, +First)
    *(InRoot$$Sections)
-    startup_n32g45x.o (+RO)
-    system_n32g45x.o (+RO)
-    misc.o (+RO)
-    n32g45x_dma.o (+RO)
-    n32g45x_exti.o (+RO)
-    n32g45x_flash.o (+RO)
-    n32g45x_gpio.o (+RO)
-    n32g45x_rcc.o (+RO)
-    n32g45x_usart.o (+RO)
-    n32g45x_pwr.o (+RO)
-    n32g45x_qspi.o (+RO)
-    main.o (+RO)
-    n32g45x_it.o (+RO)
-    hw_config.o (+RO)
-    usb_desc.o (+RO)
-    usb_endp.o (+RO)
-    usb_istr.o (+RO)
-    usb_prop.o (+RO)
-    usb_pwr.o (+RO)
-    usb_bot.o (+RO)
-    usb_scsi.o (+RO)
-    mass_mal.o (+RO)
-    scsi_data.o (+RO)
-    memory.o (+RO)
-    w25q64.o (+RO)
-    Button.o (+RO)
-    usb_core.o (+RO)
-    usb_init.o (+RO)
-    usb_int.o (+RO)
-    usb_mem.o (+RO)
-    usb_regs.o (+RO)
-    usb_sil.o (+RO)
-    diskio.o (+RO)
-    ff.o (+RO)
-    ffsystem.o (+RO)
-    ffunicode.o (+RO)
    .ANY (+RO)
    .ANY (+XO)
   }
@@ -50,8 +14,3 @@ LR_IROM1 0x08000000 0x00080000  {    ; load region size_region
   }
 }
 
-LR_ROM1 0x90000000 0x00800000  {
-  ER_ROM1 0x90000000 0x00800000  {  ; load address = execution address
-   .ANY (+RO)
-  }
-}

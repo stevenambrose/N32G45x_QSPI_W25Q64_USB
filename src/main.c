@@ -43,14 +43,15 @@
 #include "string.h"
 #include "ff.h"
 #include "ffconf.h"
+#include "button.h"
 
 FATFS fs;
 FIL fnew;
 FRESULT res_flash;
 UINT fnum;
-BYTE ReadBuffer[4096] = {0};
-BYTE WriteBuffer[] =            /* 写缓冲区*/
-    " this is a file system testing";
+BYTE ReadBuffer[FF_MAX_SS] = {0};
+BYTE handleBuffer[FF_MAX_SS] = {0};
+
 void usart_init(void);
 
 void DFU_enter(void)
@@ -58,8 +59,8 @@ void DFU_enter(void)
     GPIO_InitType DFU_IO;
     GPIO_InitStruct(&DFU_IO);
     
-    DFU_IO.GPIO_Mode = GPIO_Mode_IPU;
-    DFU_IO.Pin      =GPIO_PIN_6;
+    DFU_IO.GPIO_Mode    = GPIO_Mode_IPU;
+    DFU_IO.Pin          =GPIO_PIN_6;
     GPIO_InitPeripheral(GPIOA,&DFU_IO);
     
     if(GPIO_ReadInputDataBit(GPIOA,GPIO_PIN_6)==RESET)
@@ -81,6 +82,7 @@ void DFU_enter(void)
 void FatFs_Test(void)
 {
     uint32_t i;
+    float write_percent=0;
     BYTE work[FF_MAX_SS];
     MKFS_PARM opt =
     {
@@ -97,7 +99,7 @@ void FatFs_Test(void)
     {
         printf("》FLASH还没有文件系统，即将进行格式化...\r\n");
 
-        res_flash = f_mkfs("0:", &opt, work, sizeof(work));
+//        res_flash = f_mkfs("0:", &opt, work, sizeof(work));
 
         if (res_flash == FR_OK)
         {
@@ -126,7 +128,6 @@ void FatFs_Test(void)
     {
         printf("！！FatFs mount fail(%d)\r\n", res_flash);
         printf("！！Maybe：SPI Flash init fail。\r\n");
-        printf("请下载 SPI—读写串行FLASH 例程测试，如果正常，在该例程f_mount语句下if语句前临时多添加一句 res_flash = FR_NO_FILESYSTEM; 让重新直接执行格式化流程\r\n");
 
         while (1);
     }
@@ -135,60 +136,65 @@ void FatFs_Test(void)
         printf("》FatFs mount successful\r\n");
     }
 
-    //    /*----------------------- 文件系统测试：写测试 -------------------*/
-    //  /* 打开文件，每次都以新建的形式打开，属性为可写 */
-    //  printf("\r\n****** Write testing... ******\r\n");
-    //  res_flash = f_open(&fnew, "0:/test1.txt",FA_CREATE_ALWAYS | FA_WRITE );
-    //  printf("/******************************************************/\r\n");
-    //  if ( res_flash == FR_OK )
-    //  {
-    //      printf("》open creat successful,ready to write.\r\n");
-    //      /* 将指定存储区内容写入到文件内 */
-    //      res_flash=f_write(&fnew,WriteBuffer,sizeof(WriteBuffer),&fnum);
-    //      if(res_flash == FR_OK)
-    //      {
-    //        printf("》fail write successful,len：%d\n",fnum);
-    //        printf("》writing data is ：\r\n%s\r\n",WriteBuffer);
-    //      }
-    //      else
-    //      {
-    //        printf("！！fail write fail：(%d)\n",res_flash);
-    //      }
-    //          /* 不再读写，关闭文件 */
-    //      f_close(&fnew);
-    //  }
-    //  else
-    //  {
-    //      printf("！！open/creat fail.\r\n");
-    //  }
+//        /*----------------------- 文件系统测试：写测试 -------------------*/
+//      /* 打开文件，每次都以新建的形式打开，属性为可写 */
+//      printf("\r\n****** Write testing... ******\r\n");
+//      res_flash = f_open(&fnew, "0:/test1.txt",FA_CREATE_ALWAYS | FA_WRITE );
+//      printf("/******************************************************/\r\n");
+//      if ( res_flash == FR_OK )
+//      {
+//          printf("》open creat successful,ready to write.\r\n");
+//          /* 将指定存储区内容写入到文件内 */
+//          res_flash=f_write(&fnew,WriteBuffer,sizeof(WriteBuffer),&fnum);
+//          if(res_flash == FR_OK)
+//          {
+//            printf("》fail write successful,len：%d\n",fnum);
+//            printf("》writing data is ：\r\n%s\r\n",WriteBuffer);
+//          }
+//          else
+//          {
+//            printf("！！fail write fail：(%d)\n",res_flash);
+//          }
+//              /* 不再读写，关闭文件 */
+//          f_close(&fnew);
+//      }
+//      else
+//      {
+//          printf("！！open/creat fail.\r\n");
+//      }
 
     /*----------------------- 文件系统测试：读测试 -------------------*/
-    printf("\r\n****** ready for file reading... ******\r\n");
-    res_flash = f_open(&fnew, "0:/Oscilloscope.bin", FA_OPEN_EXISTING | FA_READ);
+    res_flash = f_open(&fnew, "0:/ER_ROM1", FA_OPEN_EXISTING | FA_READ);
     DWORD fileSize = f_size(&fnew);
-    printf("！！file size：(%d)\n", fileSize);
-
+    printf("File open successful,file size is :%d Byte\r\n",fileSize);
     if (res_flash == FR_OK)
     {
         printf("》open successful.\r\n");
+        do{
+            res_flash = f_read(&fnew, ReadBuffer, sizeof(ReadBuffer), &fnum);
 
-        res_flash = f_read(&fnew, ReadBuffer, sizeof(ReadBuffer), &fnum);
-
-        if (res_flash == FR_OK)
-        {
-            //          printf("》file read succesul,reading data len ：%d\r\n",fnum);
-            for (i = 0; i < fnum; i++)
+            if (res_flash == FR_OK)
             {
-                printf(" %02x ", ReadBuffer[i]);
+                write_percent+=fnum;
+                printf("read percent:%f%%\n\r",(write_percent/fileSize)*100);
             }
-
-            printf("\n\r");
-
-        }
-        else
+            else
+            {
+                printf("！！file reading fail：(%d)\n", res_flash);
+            }
+        }while(fnum==FF_MAX_SS);
+        for(i=0;i<fnum;i=i+4)
         {
-            printf("！！file reading fail：(%d)\n", res_flash);
+            handleBuffer[i]=ReadBuffer[i+3];
+            handleBuffer[i+1]=ReadBuffer[i+2];
+            handleBuffer[i+2]=ReadBuffer[i+1];
+            handleBuffer[i+3]=ReadBuffer[i];
         }
+        for(i=0;i<fnum;i++)
+            printf(" 0x%02x ",handleBuffer[i]);
+        
+        QspiFlashErase(0x20,0x00);
+        W25Q64_BufferWrite(handleBuffer,0x00,fnum);
     }
     else
     {
@@ -204,11 +210,10 @@ void FatFs_Test(void)
 
 }
 
-
-
-
-
-
+void Delay(uint32_t t)
+{
+    while(t--);
+}
 
 /*******************************************************************************
  * Function Name  : main.
@@ -219,17 +224,26 @@ void FatFs_Test(void)
  *******************************************************************************/
 int main(void)
 {
-
+    uint32_t i,temp ;
+    RCC_EnableAPB2PeriphClk(RCC_APB2_PERIPH_GPIOA,ENABLE);
     Set_System();
 
     usart_init();
     
-    DFU_enter();
+//    DFU_enter();
+//    
+//    FatFs_Test();
+    Qspi_Init(XIP_SPI_FORMAT_SEL, RX_ONLY, 1024); 
     
-    
+    printf(" \r\n\r\n ");  
+   
+    blink_init();
     while (1)
     {
-
+        blink(0);
+        Delay(0xffffff);
+        blink(1);
+        Delay(0xffffff);
     }
 
 }
@@ -302,7 +316,7 @@ void usart_init(void)
     USART_Init(USARTx, &USART_InitStructure);
     /* Enable the USARTx */
     USART_Enable(USARTx, ENABLE);
-    printf("\n\rUSART Printf Example: retarget the C library printf function to the USART\n\r");
+    printf("\n\rSystem init successful\n\r");
 }
 
 /* retarget the C library printf function to the USART */

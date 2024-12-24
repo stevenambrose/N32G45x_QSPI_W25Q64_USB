@@ -56,3 +56,4 @@
 .\objects\main.o: ..\firmware\fatfs\ff.h
 .\objects\main.o: ..\firmware\fatfs\ffconf.h
 .\objects\main.o: ..\firmware\fatfs\ffconf.h
+.\objects\main.o: ..\inc\button.h

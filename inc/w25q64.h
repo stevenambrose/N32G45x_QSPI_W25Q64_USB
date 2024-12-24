@@ -84,7 +84,7 @@ void QspiFlashProgram(uint32_t PrgAddr, uint32_t *pAddr, uint32_t cnt);
 void W25Q64_PageWrite(uint32_t PrgAddr, uint8_t *pAddr, uint32_t cnt);
 void W25Q64_BufferWrite(uint8_t* pBuffer,uint32_t WriteAddr,uint32_t NumByteToWrite);
 void QspiFlashChipErase(void);
-
+void Qspi_Init(QSPI_FORMAT_SEL qspi_format_sel, QSPI_DATA_DIR data_dir, uint16_t count);
 
 
 

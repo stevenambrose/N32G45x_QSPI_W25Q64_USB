@@ -73,23 +73,6 @@ uint16_t MAL_Write(uint8_t lun, uint32_t Memory_Offset, uint32_t *Writebuff, uin
 //            printf(" 0x%x ",Writebuff[i]);
 //        }
 //            printf("\n\r");
-     /*  for( i = 0; i < Transfer_Length; i += FLASH_PAGE_SIZE )
-       { 
-          if( FLASH_WaitForLastOpt(FLASH_WAIT_TIMEOUT) != FLASH_TIMEOUT )
-          {
-             FLASH_ClearFlag(FLASH_FLAG_EOP|FLASH_FLAG_PGERR|FLASH_FLAG_WRPERR);
-          }     
-          FLASH_EraseOnePage(FLASH_START_ADDR + Memory_Offset + i); 
-       }            
-         
-       for( i = 0; i < Transfer_Length; i+=4 )
-       { 
-           if( FLASH_WaitForLastOpt(FLASH_WAIT_TIMEOUT) != FLASH_TIMEOUT )
-           {
-              FLASH_ClearFlag(FLASH_FLAG_EOP|FLASH_FLAG_PGERR|FLASH_FLAG_WRPERR); 
-           } 
-           FLASH_ProgramWord(FLASH_START_ADDR + Memory_Offset + i , Writebuff[i>>2]); 
-       }*/
 
       break;
     case 1:
@@ -124,10 +107,6 @@ uint16_t MAL_Read(uint8_t lun, uint32_t Memory_Offset, uint32_t *Readbuff, uint1
 //                printf(" 0x%x ",Readbuff[i]);
 //            }
 //            printf("\n\r");
-/*          for( i=0; i < Transfer_Length; i+=4 )
-          {
-             Readbuff[i>>2] = ((vu32*)(FLASH_START_ADDR + Memory_Offset))[i>>2]; 
-          }*/
           break;
         case 1:
           break;
